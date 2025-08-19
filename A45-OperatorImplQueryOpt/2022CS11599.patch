@@ -1,0 +1,957 @@
+diff --git a/src/main/java/in/ac/iitd/db362/catalog/StatisticsQueryService.java b/src/main/java/in/ac/iitd/db362/catalog/StatisticsQueryService.java
+index 423136a..afeec0c 100644
+--- a/src/main/java/in/ac/iitd/db362/catalog/StatisticsQueryService.java
++++ b/src/main/java/in/ac/iitd/db362/catalog/StatisticsQueryService.java
+@@ -17,30 +17,222 @@ public class StatisticsQueryService {
+     }
+ 
+     public double getEqualitySelectivity(String tableName, String columnName, Object value) {
+-        throw new UnsupportedOperationException("Please implement me first!");
++        TableStatistics tableStats = catalog.getTableStatistics(tableName);
++        if (tableStats == null) {
++            return 0.5; // Default if no statistics available
++        }
++
++        ColumnStatistics<?> colStats = tableStats.getColumnStatistics(columnName);
++        if (colStats == null) {
++            return 0.5; // Default if no column statistics available
++        }
++
++        // Basic selectivity assumption: 1/cardinality
++        int cardinality = colStats.getCardinality();
++        if (cardinality <= 0) {
++            return 0.1; // Default for empty columns
++        }
++
++        return 1.0 / cardinality;
+     }
+ 
+     public double getEqualitySelectivityUsingHistogram(String tableName, String columnName, Object value) {
+-        throw new UnsupportedOperationException("Please implement me first!");
++        TableStatistics tableStats = catalog.getTableStatistics(tableName);
++        if (tableStats == null) {
++            return getEqualitySelectivity(tableName, columnName, value);
++        }
++        ColumnStatistics<?> colStats = tableStats.getColumnStatistics(columnName);
++        if (colStats == null) {
++            return getEqualitySelectivity(tableName, columnName, value);
++        }
++        int[] histogram = colStats.getHistogram();
++        if (histogram == null || histogram.length == 0) {
++            return getEqualitySelectivity(tableName, columnName, value);
++        }
++        // Determine the bucket for this value
++        Object min = colStats.getMin();
++        Object max = colStats.getMax();
++        int bucketIndex = getBucketIndex(value, min, max, histogram.length);
++
++        if (bucketIndex < 0 || bucketIndex >= histogram.length) {
++            return 0.0; // Value outside the range
++        }
++
++        // Estimate based on bucket frequency and bucket size
++        int bucketFrequency = histogram[bucketIndex];
++        int totalValues = colStats.getNumValues();
++
++        // Assume uniform distribution within the bucket
++        double bucketSelectivity = (double) bucketFrequency / totalValues;
++        double valueSelectivity = bucketSelectivity / getBucketSize(bucketIndex, histogram.length);
++
++        return Math.min(valueSelectivity, 1.0);
+     }
+ 
+ 
+     public double getRangeSelectivity(String tableName, String columnName, Object lowerBound, Object upperBound) {
+-        throw new UnsupportedOperationException("Please implement me first!");
++        TableStatistics tableStats = catalog.getTableStatistics(tableName);
++        if (tableStats == null) {
++            return 0.5; // Default
++        }
++
++        ColumnStatistics<?> colStats = tableStats.getColumnStatistics(columnName);
++        if (colStats == null) {
++            return 0.5; // Default
++        }
++
++        Object min = colStats.getMin();
++        Object max = colStats.getMax();
++
++        if (min == null || max == null) {
++            return 0.33; // Common default
++        }
++
++        // Normalize bounds within the column's range
++        double normalizedLower = (lowerBound != null) ? normalize(lowerBound, min, max) : 0.0;
++        double normalizedUpper = (upperBound != null) ? normalize(upperBound, min, max) : 1.0;
++
++        // Limit to valid range [0, 1]
++        normalizedLower = Math.max(0.0, Math.min(1.0, normalizedLower));
++        normalizedUpper = Math.max(0.0, Math.min(1.0, normalizedUpper));
++
++        // Calculate fraction of range
++        return Math.max(0.0, normalizedUpper - normalizedLower);
+     }
+ 
+ 
+     public double getRangeSelectivityUsingHistogram(String tableName, String columnName, Object lowerBound, Object upperBound) {
+-        throw new UnsupportedOperationException("Please implement me first!");
++        TableStatistics tableStats = catalog.getTableStatistics(tableName);
++        if (tableStats == null) {
++            return getRangeSelectivity(tableName, columnName, lowerBound, upperBound);
++        }
++
++        ColumnStatistics<?> colStats = tableStats.getColumnStatistics(columnName);
++        if (colStats == null) {
++            return getRangeSelectivity(tableName, columnName, lowerBound, upperBound);
++        }
++
++        int[] histogram = colStats.getHistogram();
++        if (histogram == null || histogram.length == 0) {
++            return getRangeSelectivity(tableName, columnName, lowerBound, upperBound);
++        }
++
++        Object min = colStats.getMin();
++        Object max = colStats.getMax();
++
++        // Find the bucket indices
++        int lowerBucketIndex = (lowerBound != null) ?
++                getBucketIndex(lowerBound, min, max, histogram.length) : 0;
++        int upperBucketIndex = (upperBound != null) ?
++                getBucketIndex(upperBound, min, max, histogram.length) : histogram.length - 1;
++
++        // Constrain to valid range
++        lowerBucketIndex = Math.max(0, lowerBucketIndex);
++        upperBucketIndex = Math.min(histogram.length - 1, upperBucketIndex);
++
++        // If completely outside range
++        if (lowerBucketIndex > upperBucketIndex) {
++            return 0.0;
++        }
++
++        // Sum the frequencies in the covered buckets
++        int coveredCount = 0;
++        int totalCount = colStats.getNumValues();
++
++        for (int i = lowerBucketIndex; i <= upperBucketIndex; i++) {
++            coveredCount += histogram[i];
++        }
++
++        return (double) coveredCount / totalCount;
+     }
+ 
+ 
+     public Object getMin(String tableName, String columnName) {
+-        throw new UnsupportedOperationException("Please implement me first!");
++        TableStatistics tableStats = catalog.getTableStatistics(tableName);
++        if (tableStats == null) {
++            return null;
++        }
++
++        ColumnStatistics<?> colStats = tableStats.getColumnStatistics(columnName);
++        if (colStats == null) {
++            return null;
++        }
++
++        return colStats.getMin();
+     }
+ 
+ 
+     public Object getMax(String tableName, String columnName) {
+-        return null;
++        TableStatistics tableStats = catalog.getTableStatistics(tableName);
++        if (tableStats == null) {
++            return null;
++        }
++
++        ColumnStatistics<?> colStats = tableStats.getColumnStatistics(columnName);
++        if (colStats == null) {
++            return null;
++        }
++
++        return colStats.getMax();
++    }
++
++    /**
++     * Helper method to determine which bucket a value belongs to
++     */
++    private int getBucketIndex(Object value, Object min, Object max, int numBuckets) {
++        double normalizedValue = normalize(value, min, max);
++        if (normalizedValue < 0 || normalizedValue > 1) {
++            return -1; // Outside the range
++        }
++
++        return (int) (normalizedValue * numBuckets);
++    }
++
++    /**
++     * Helper method to normalize a value within a range to [0,1]
++     */
++    private double normalize(Object value, Object min, Object max) {
++        if (value instanceof Number && min instanceof Number && max instanceof Number) {
++            double val = ((Number) value).doubleValue();
++            double minVal = ((Number) min).doubleValue();
++            double maxVal = ((Number) max).doubleValue();
++
++            if (maxVal == minVal) {
++                return (val == minVal) ? 0.5 : (val < minVal ? 0.0 : 1.0);
++            }
++
++            return (val - minVal) / (maxVal - minVal);
++        } else if (value instanceof String && min instanceof String && max instanceof String) {
++            String val = (String) value;
++            String minVal = (String) min;
++            String maxVal = (String) max;
++
++            if (maxVal.equals(minVal)) {
++                return val.equals(minVal) ? 0.5 : (val.compareTo(minVal) < 0 ? 0.0 : 1.0);
++            }
++
++            // Simple string range estimation
++            double valLength = val.length();
++            double minLength = minVal.length();
++            double maxLength = maxVal.length();
++            double rangeSize = maxLength - minLength;
++
++            if (rangeSize == 0) {
++                // Use lexicographic comparison as an approximation
++                return (val.compareTo(minVal) - minVal.compareTo(minVal)) /
++                        (double) (maxVal.compareTo(minVal) - minVal.compareTo(minVal));
++            }
++
++            return (valLength - minLength) / rangeSize;
++        }
++
++        return 0.5; // Default if types don't match
++    }
++
++    /**
++     * Helper to get the relative size of a bucket
++     */
++    private double getBucketSize(int bucketIndex, int numBuckets) {
++        return 1.0 / numBuckets; // Assuming equal width buckets
+     }
+ }
+diff --git a/src/main/java/in/ac/iitd/db362/operators/ComparisonPredicate.java b/src/main/java/in/ac/iitd/db362/operators/ComparisonPredicate.java
+index 05a3ba8..d41f6e3 100644
+--- a/src/main/java/in/ac/iitd/db362/operators/ComparisonPredicate.java
++++ b/src/main/java/in/ac/iitd/db362/operators/ComparisonPredicate.java
+@@ -38,9 +38,55 @@ public class ComparisonPredicate implements Predicate {
+         // -------------------------
+ 
+         //TODO: Implement me!
++        //Implementing for now with the assumption that a basic predicate of the form A op c
++        //If the column to be compared in predicate is not present in the tuple, ignore
++        if (!tuple.getSchema().contains((String) leftOperand)) {
++            return true;
++        }
++        Object leftValue = resolveOperand(leftOperand, tuple);
++        // need to handle the right value case after tomorrow's clarification - doubt #1
++        Object rightValue = rightOperand; // This will fail if there is a column name with the same value as constant
++        switch(operator) {
++            case "=" : return (customComparator(leftValue, rightValue) == 0);
++            case ">" : return (customComparator(leftValue, rightValue) > 0);
++            case ">=": return (customComparator(leftValue, rightValue) >= 0);
++            case "<" : return (customComparator(leftValue, rightValue) < 0);
++            case "<=": return (customComparator(leftValue, rightValue) <= 0);
++            case "!=": return (customComparator(leftValue, rightValue) != 0);
++            default: throw new IllegalArgumentException("Unsupported operator: " + operator);
++        }
++    }
++
++    private Object resolveOperand(Object operand, Tuple tuple) {
++        if (operand instanceof String) {
++            String column = (String) operand;
++            if (tuple.getSchema().contains(column)) {
++                return tuple.get(column); // Column value
++            } else {
++                return column; // String constant
++            }
++        }
++        return operand; // Non-String constant (e.g., Integer)
++    }
+ 
+-        // Remove me after your implementation
+-        throw new RuntimeException("Method not yet implemented");
++    private int customComparator(Object left, Object right) {
++        if(left == null || right == null) {
++            throw new IllegalArgumentException("Null values are not supported.");
++        }
++        // Numeric comparison
++        if (left instanceof Number && right instanceof Number) {
++            double leftVal = ((Number) left).doubleValue();
++            double rightVal = ((Number) right).doubleValue();
++            return Double.compare(leftVal, rightVal);
++        }
++        // String comparison
++        else if (left instanceof String && right instanceof String) {
++            return ((String) left).compareTo((String) right);
++        }
++        else {
++            throw new IllegalArgumentException("Type mismatch or unsupported types: " +
++                    left.getClass().getSimpleName() + " vs " + right.getClass().getSimpleName());
++        }
+     }
+ 
+     // DO NOT REMOVE these functions! ---
+diff --git a/src/main/java/in/ac/iitd/db362/operators/EqualityJoinPredicate.java b/src/main/java/in/ac/iitd/db362/operators/EqualityJoinPredicate.java
+index 4aaf3c3..866336e 100644
+--- a/src/main/java/in/ac/iitd/db362/operators/EqualityJoinPredicate.java
++++ b/src/main/java/in/ac/iitd/db362/operators/EqualityJoinPredicate.java
+@@ -38,11 +38,38 @@ public class EqualityJoinPredicate implements JoinPredicate {
+         // -------------------------
+ 
+         //TODO: Implement me!
++        int leftColumnIndex = left.getSchema().indexOf(leftColumn);
++        int rightColumnIndex = right.getSchema().indexOf(rightColumn);
++        if (leftColumnIndex == -1 || rightColumnIndex == -1) {
++            throw new IllegalArgumentException("Column not found in schema: " +
++                    (leftColumnIndex == -1 ? leftColumn : rightColumn));
++        }
++        Object leftValue = left.getValues().get(leftColumnIndex);
++        Object rightValue = right.getValues().get(rightColumnIndex);
+ 
+-        // Remove me after your implementation
+-        throw new RuntimeException("Method not yet implemented");
++        if(leftValue == null || rightValue == null) return false; //Ignore if any row has null values
++        return (customComparator(leftValue, rightValue) == 0);
+     }
+ 
++    private int customComparator(Object left, Object right) {
++        if(left == null || right == null) {
++            throw new IllegalArgumentException("Null values are not supported.");
++        }
++        // Numeric comparison
++        if (left instanceof Number && right instanceof Number) {
++            double leftVal = ((Number) left).doubleValue();
++            double rightVal = ((Number) right).doubleValue();
++            return Double.compare(leftVal, rightVal);
++        }
++        // String comparison
++        else if (left instanceof String && right instanceof String) {
++            return ((String) left).compareTo((String) right);
++        }
++        else {
++            throw new IllegalArgumentException("Type mismatch or unsupported types: " +
++                    left.getClass().getSimpleName() + " vs " + right.getClass().getSimpleName());
++        }
++    }
+ 
+     // DO NOT REMOVE THESE METHODS
+     public String getLeftColumn() {
+diff --git a/src/main/java/in/ac/iitd/db362/operators/FilterOperator.java b/src/main/java/in/ac/iitd/db362/operators/FilterOperator.java
+index 100dd61..e108f9e 100644
+--- a/src/main/java/in/ac/iitd/db362/operators/FilterOperator.java
++++ b/src/main/java/in/ac/iitd/db362/operators/FilterOperator.java
+@@ -25,6 +25,8 @@ public class FilterOperator extends OperatorBase implements Operator {
+         // ------------------------
+ 
+         //TODO: Implement me!
++        //Error handling not being done as of now, need to understand the pipeline better for what kind of errors may creep in
++        child.open();
+     }
+ 
+     @Override
+@@ -34,9 +36,14 @@ public class FilterOperator extends OperatorBase implements Operator {
+         // -------------------------
+ 
+         //TODO: Implement me!
+-
+-        // remove and return the next tuple
+-        throw new RuntimeException("Method not yet implemented");
++        //Error handling not being done as of now, need to understand the pipeline better for what kind of errors may creep in
++        Tuple tuple;
++        while ((tuple = child.next()) != null) {
++            if (predicate.evaluate(tuple)) {
++                return tuple;
++            }
++        }
++        return null;
+     }
+ 
+     @Override
+@@ -46,6 +53,8 @@ public class FilterOperator extends OperatorBase implements Operator {
+         // -------------------------
+ 
+         //TODO: Implement me!
++        //Error handling not being done as of now, need to understand the pipeline better for what kind of errors may creep in
++        child.close();
+     }
+ 
+ 
+diff --git a/src/main/java/in/ac/iitd/db362/operators/JoinOperator.java b/src/main/java/in/ac/iitd/db362/operators/JoinOperator.java
+index deee4e3..f138a8a 100644
+--- a/src/main/java/in/ac/iitd/db362/operators/JoinOperator.java
++++ b/src/main/java/in/ac/iitd/db362/operators/JoinOperator.java
+@@ -16,6 +16,13 @@ public class JoinOperator extends OperatorBase implements Operator {
+     private Operator rightChild;
+     private JoinPredicate predicate;
+ 
++    private Map<Object, List<Tuple>> hashTable;
++    private Tuple currentRightTuple;
++    private List<Tuple> currentMatchingLeftTuples;
++    private int currentLeftIndex;
++    private int leftColumnIndex;
++    private int rightColumnIndex;
++
+     public JoinOperator(Operator leftChild, Operator rightChild, JoinPredicate predicate) {
+         this.leftChild = leftChild;
+         this.rightChild = rightChild;
+@@ -29,6 +36,38 @@ public class JoinOperator extends OperatorBase implements Operator {
+         // ----------------------
+ 
+         //TODO: Implement me!
++        leftChild.open();
++        // Complete the building phase
++        hashTable = new HashMap<>();
++        Tuple leftTuple = leftChild.next();
++        // initialise the leftColumnIndex and solve for the first tuple
++        if (leftTuple != null) {
++            leftColumnIndex = leftTuple.getSchema().indexOf(((EqualityJoinPredicate) predicate).getLeftColumn());
++            if (leftColumnIndex == -1) {
++                // column not found in the left relation
++                throw new IllegalArgumentException("Column not found: " + ((EqualityJoinPredicate) predicate).getLeftColumn());
++            }
++            Object key_leftValue = leftTuple.getValues().get(leftColumnIndex);
++            Object key = getHashKey(key_leftValue);
++            if(key != null) {
++                hashTable.computeIfAbsent(key, k -> new ArrayList<>()).add(leftTuple);
++            }
++        }
++        // Solve for all the consecutive tuples
++        while ((leftTuple = leftChild.next()) != null) {
++            Object key_leftValue = leftTuple.getValues().get(leftColumnIndex);
++            Object key = getHashKey(key_leftValue);
++            if(key != null) {
++                hashTable.computeIfAbsent(key, k -> new ArrayList<>()).add(leftTuple);
++            }
++        }
++
++        // Initialise the probing phase
++        rightChild.open();
++        currentRightTuple = null;
++        currentMatchingLeftTuples = null;
++        currentLeftIndex = 0;
++        rightColumnIndex = -1;
+ 
+     }
+ 
+@@ -39,9 +78,36 @@ public class JoinOperator extends OperatorBase implements Operator {
+         // ----------------------
+ 
+         //TODO: Implement me!
+-
+-        // Remove me and return the next tuple
+-        throw new RuntimeException("Method not yet implemented");
++        while (true) {
++            if (currentMatchingLeftTuples != null && currentLeftIndex < currentMatchingLeftTuples.size()) {
++                Tuple leftTuple = currentMatchingLeftTuples.get(currentLeftIndex);
++                currentLeftIndex++;
++                List<String> joinedSchema = new ArrayList<>(leftTuple.getSchema());
++                joinedSchema.addAll(currentRightTuple.getSchema());
++                List<Object> joinedValues = new ArrayList<>(leftTuple.getValues());
++                joinedValues.addAll(currentRightTuple.getValues());
++                return new Tuple(joinedValues, joinedSchema);
++            } else {
++                currentRightTuple = rightChild.next();
++                if (currentRightTuple == null) {
++                    return null;
++                }
++                // Set rightColumnIndex from the first right tuple
++                if (rightColumnIndex < 0) {
++                    rightColumnIndex = currentRightTuple.getSchema().indexOf(((EqualityJoinPredicate) predicate).getRightColumn());
++                    if (rightColumnIndex == -1) {
++                        throw new IllegalArgumentException("Column not found: " + ((EqualityJoinPredicate) predicate).getRightColumn());
++                    }
++                }
++                Object rightValue = currentRightTuple.getValues().get(rightColumnIndex);
++                Object rightKey = getHashKey(rightValue);
++                currentMatchingLeftTuples = hashTable.get(rightKey);
++                if (currentMatchingLeftTuples == null) {
++                    currentMatchingLeftTuples = Collections.emptyList();
++                }
++                currentLeftIndex = 0;
++            }
++        }
+     }
+ 
+     @Override
+@@ -51,9 +117,29 @@ public class JoinOperator extends OperatorBase implements Operator {
+         // ------------------------
+ 
+         //TODO: Implement me!
+-
++        leftChild.close();
++        rightChild.close();
++        hashTable = null;
++        currentRightTuple = null;
++        currentMatchingLeftTuples = null;
++    }
++    // Not using the evaluate() function in EqualityJoinPredicate - no use for that here since we're not comparing tuple-to-tuple
++    // This implementation assumes that the left-handed relation is smaller (i.e. has lower number of records)
++
++    private Object getHashKey(Object value) {
++        if (value == null) {
++            return null;
++        } else if (value instanceof Integer) {
++            return ((Integer) value);
++        } else if (value instanceof Double) {
++            return ((Double) value);
++        } else if (value instanceof String) {
++            return value;
++        }
++        else {
++            throw new IllegalArgumentException("Unsupported type: " + value.getClass().getSimpleName());
++        }
+     }
+-
+ 
+     // Do not remove these methods!
+     public Operator getLeftChild() {
+diff --git a/src/main/java/in/ac/iitd/db362/operators/ProjectOperator.java b/src/main/java/in/ac/iitd/db362/operators/ProjectOperator.java
+index 2da80e9..8aee3ca 100644
+--- a/src/main/java/in/ac/iitd/db362/operators/ProjectOperator.java
++++ b/src/main/java/in/ac/iitd/db362/operators/ProjectOperator.java
+@@ -15,6 +15,7 @@ public class ProjectOperator extends OperatorBase implements Operator {
+     private Operator child;
+     private List<String> projectedColumns;
+     private boolean distinct;
++    private Set<List<Object>> seenProjections;
+ 
+ 
+     /**
+@@ -36,6 +37,10 @@ public class ProjectOperator extends OperatorBase implements Operator {
+         // -------------------------
+ 
+         // TODO: Implement me!
++        child.open();
++        if(distinct) {
++            seenProjections = new HashSet<>();
++        }
+     }
+ 
+     @Override
+@@ -45,9 +50,26 @@ public class ProjectOperator extends OperatorBase implements Operator {
+         // ------------------------
+ 
+         //TODO: Implement me!
+-
+-        // remove me after implementation
+-        throw new RuntimeException("Method not yet implemented");
++        Tuple originalTuple;
++        // in this case, the while-loop doesn't actually loop, but it will loop later on in case of duplicates
++        while ((originalTuple = child.next()) != null) {
++            // Project the tuple to the specified columns
++            List<Object> projectedValues = new ArrayList<>();
++            List<String> projectedSchema = new ArrayList<>();
++            for (String column : projectedColumns) {
++                projectedValues.add(originalTuple.get(column));
++                projectedSchema.add(column);
++            }
++            // If distinct is false, return immediately
++            if (!distinct) {
++                return new Tuple(projectedValues, projectedSchema);
++            }
++            // If distinct, return only if projection is not seen before
++            if (seenProjections.add(projectedValues)) { // add returns false if already seen
++                return new Tuple(projectedValues, projectedSchema);
++            }
++        }
++        return null;
+     }
+ 
+     @Override
+@@ -57,6 +79,8 @@ public class ProjectOperator extends OperatorBase implements Operator {
+         // ------------------------
+ 
+         // TODO: Implement me!
++        child.close();
++        seenProjections = null;
+     }
+ 
+     // do not remvoe these methods!
+diff --git a/src/main/java/in/ac/iitd/db362/optimizer/BasicOptimizer.java b/src/main/java/in/ac/iitd/db362/optimizer/BasicOptimizer.java
+index 8b90087..9351d54 100644
+--- a/src/main/java/in/ac/iitd/db362/optimizer/BasicOptimizer.java
++++ b/src/main/java/in/ac/iitd/db362/optimizer/BasicOptimizer.java
+@@ -5,6 +5,10 @@ import in.ac.iitd.db362.api.PlanPrinter;
+ import in.ac.iitd.db362.operators.Operator;
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
++// doing a few additional imports to simplify my implementation for now
++import in.ac.iitd.db362.catalog.*;
++import in.ac.iitd.db362.operators.*;
++import java.util.*;
+ 
+ /**
+  * A basic optimizer implementation. Feel free and be creative in designing your optimizer.
+@@ -40,8 +44,367 @@ public class BasicOptimizer implements Optimizer {
+     @Override
+     public Operator optimize(Operator plan) {
+         logger.info("Optimizing Plan:\n{}", PlanPrinter.getPlanString(plan));
+-        // TODO: Implement me!
+-        // For now, we simply return the plan unmodified.
+-        return plan;
++
++        // Step 1: Push down filters
++        Operator planWithPushedFilters = pushDownFilters(plan);
++        logger.info("Plan after filter pushdown:\n{}", PlanPrinter.getPlanString(planWithPushedFilters));
++        // Initialize services and data structures here
++        StatisticsQueryService statsService = new StatisticsQueryService(catalog);
++        Map<Operator, Double> cardinalityEstimates = new HashMap<>();
++
++        Operator optimizedPlan = planWithPushedFilters;
++
++        try {
++            // Step 2: Optimize join ordering
++            optimizedPlan = optimizeJoins(planWithPushedFilters, statsService, cardinalityEstimates);
++            logger.info("Plan after join optimization:\n{}", PlanPrinter.getPlanString(optimizedPlan));
++        }
++        catch (Exception ignored) {}
++
++        return optimizedPlan;
++    }
++
++    /**
++     * Pushes filter operators down in the query plan tree,
++     * as close to the scan operators as possible.
++     *
++     * @param op The root operator of the query plan
++     * @return The optimized query plan with pushed down filters
++     */
++    private Operator pushDownFilters(Operator op) {
++        // Collect filters from the tree
++        List<FilterOperator> filters = new ArrayList<>();
++        Operator noFilterPlan = removeFilters(op, filters);
++
++        // Build a mapping from table name to associated filters
++        Map<String, List<FilterOperator>> tableFilters = mapFiltersToTables(filters);
++
++        // Apply the filters just above their respective scan operators
++        return insertFiltersAboveScans(noFilterPlan, tableFilters);
++    }
++
++    /**
++     * Removes filter operators from the tree and collects them
++     *
++     * @param op The current operator to process
++     * @param collectedFilters List to store removed filter operators
++     * @return The plan without filter operators
++     */
++    private Operator removeFilters(Operator op, List<FilterOperator> collectedFilters) {
++        if (op == null) {
++            return null;
++        }
++
++        if (op instanceof FilterOperator) {
++            FilterOperator filter = (FilterOperator) op;
++            collectedFilters.add(filter);
++            return removeFilters(filter.getChild(), collectedFilters);
++        } else if (op instanceof ProjectOperator) {
++            ProjectOperator project = (ProjectOperator) op;
++            Operator newChild = removeFilters(project.getChild(), collectedFilters);
++            return new ProjectOperator(newChild, project.getProjectedColumns(), project.isDistinct());
++        } else if (op instanceof JoinOperator) {
++            JoinOperator join = (JoinOperator) op;
++            Operator newLeft = removeFilters(join.getLeftChild(), collectedFilters);
++            Operator newRight = removeFilters(join.getRightChild(), collectedFilters);
++            return new JoinOperator(newLeft, newRight, join.getPredicate());
++        } else if (op instanceof SinkOperator) {
++            SinkOperator sink = (SinkOperator) op;
++            Operator newChild = removeFilters(sink.getChild(), collectedFilters);
++            return new SinkOperator(newChild, sink.getOutputFile());
++        }
++
++        // ScanOperator or other terminal operators - no modification needed
++        return op;
++    }
++
++    /**
++     * Maps filter operators to their respective tables based on column references
++     *
++     * @param filters The list of filter operators to map
++     * @return Map from table name to list of associated filters
++     */
++    private Map<String, List<FilterOperator>> mapFiltersToTables(List<FilterOperator> filters) {
++        Map<String, List<FilterOperator>> tableFilters = new HashMap<>();
++
++        for (FilterOperator filter : filters) {
++            Predicate predicate = filter.getPredicate();
++            String tableName = null;
++
++            if (predicate instanceof ComparisonPredicate) {
++                ComparisonPredicate compPred = (ComparisonPredicate) predicate;
++                Object leftOp = compPred.getLeftOperand();
++
++                if (leftOp instanceof String) {
++                    tableName = catalog.getTableForColumn((String) leftOp);
++                }
++            }
++
++            if (tableName != null) {
++                tableFilters.computeIfAbsent(tableName, k -> new ArrayList<>()).add(filter);
++            }
++        }
++
++        return tableFilters;
++    }
++
++    /**
++     * Inserts filter operators just above their respective scan operators
++     *
++     * @param op The current operator to process
++     * @param tableFilters Map from table name to associated filters
++     * @return The plan with inserted filters
++     */
++    private Operator insertFiltersAboveScans(Operator op, Map<String, List<FilterOperator>> tableFilters) {
++        if (op == null) {
++            return null;
++        }
++
++        if (op instanceof ScanOperator) {
++            ScanOperator scan = (ScanOperator) op;
++            String filePath = scan.getFilePath();
++            List<FilterOperator> filters = tableFilters.get(filePath);
++
++            if (filters != null && !filters.isEmpty()) {
++                // Stack filters above the scan
++                Operator current = scan;
++                for (FilterOperator filter : filters) {
++                    current = new FilterOperator(current, filter.getPredicate());
++                }
++                return current;
++            }
++            return scan;
++        } else if (op instanceof ProjectOperator) {
++            ProjectOperator project = (ProjectOperator) op;
++            Operator newChild = insertFiltersAboveScans(project.getChild(), tableFilters);
++            return new ProjectOperator(newChild, project.getProjectedColumns(), project.isDistinct());
++        } else if (op instanceof JoinOperator) {
++            JoinOperator join = (JoinOperator) op;
++            Operator newLeft = insertFiltersAboveScans(join.getLeftChild(), tableFilters);
++            Operator newRight = insertFiltersAboveScans(join.getRightChild(), tableFilters);
++            return new JoinOperator(newLeft, newRight, join.getPredicate());
++        } else if (op instanceof SinkOperator) {
++            SinkOperator sink = (SinkOperator) op;
++            Operator newChild = insertFiltersAboveScans(sink.getChild(), tableFilters);
++            return new SinkOperator(newChild, sink.getOutputFile());
++        } else if (op instanceof FilterOperator) {
++            // This shouldn't happen as we've removed all filters,
++            // but handling it just in case
++            FilterOperator filter = (FilterOperator) op;
++            Operator newChild = insertFiltersAboveScans(filter.getChild(), tableFilters);
++            return new FilterOperator(newChild, filter.getPredicate());
++        }
++
++        return op;
++    }
++
++    /**
++     * Optimizes join ordering based on cardinality estimates
++     *
++     * @param op The root operator of the query plan
++     * @param statsService The statistics query service to use
++     * @param cardinalityEstimates Map to store cardinality estimates
++     * @return The optimized query plan with reordered joins
++     */
++    private Operator optimizeJoins(Operator op, StatisticsQueryService statsService,
++                                   Map<Operator, Double> cardinalityEstimates) {
++        // First recursively estimate cardinalities for all operators
++        estimateCardinality(op, statsService, cardinalityEstimates);
++
++        // Then recursively optimize join orders
++        return reorderJoins(op, statsService, cardinalityEstimates);
++    }
++
++    /**
++     * Estimates the cardinality of each operator in the tree
++     *
++     * @param op The operator to process
++     * @param statsService The statistics query service to use
++     * @param cardinalityEstimates Map to store cardinality estimates
++     * @return The estimated cardinality of the operator
++     */
++    private double estimateCardinality(Operator op, StatisticsQueryService statsService,
++                                       Map<Operator, Double> cardinalityEstimates) {
++        if (op == null) {
++            return 0.0;
++        }
++
++        // Check if we've already computed this
++        if (cardinalityEstimates.containsKey(op)) {
++            return cardinalityEstimates.get(op);
++        }
++
++        double estimate;
++
++        if (op instanceof ScanOperator) {
++            ScanOperator scan = (ScanOperator) op;
++            TableStatistics stats = catalog.getTableStatistics(scan.getFilePath());
++            estimate = (stats != null) ? stats.getNumRows() : 1000.0; // Default if no stats
++        } else if (op instanceof FilterOperator) {
++            FilterOperator filter = (FilterOperator) op;
++            double childEstimate = estimateCardinality(filter.getChild(), statsService, cardinalityEstimates);
++            double selectivity = estimateSelectivity(filter.getPredicate(), statsService);
++            estimate = childEstimate * selectivity;
++        } else if (op instanceof ProjectOperator) {
++            ProjectOperator project = (ProjectOperator) op;
++            double childEstimate = estimateCardinality(project.getChild(), statsService, cardinalityEstimates);
++            // If it's a distinct projection, apply a reduction factor
++            if (project.isDistinct()) {
++                estimate = childEstimate * 0.5; // Simple heuristic for distinct
++            } else {
++                estimate = childEstimate; // No change for regular projection
++            }
++        } else if (op instanceof JoinOperator) {
++            JoinOperator join = (JoinOperator) op;
++            double leftEstimate = estimateCardinality(join.getLeftChild(), statsService, cardinalityEstimates);
++            double rightEstimate = estimateCardinality(join.getRightChild(), statsService, cardinalityEstimates);
++            double joinSelectivity = estimateJoinSelectivity(join, statsService);
++            estimate = leftEstimate * rightEstimate * joinSelectivity;
++        } else if (op instanceof SinkOperator) {
++            SinkOperator sink = (SinkOperator) op;
++            estimate = estimateCardinality(sink.getChild(), statsService, cardinalityEstimates);
++        } else {
++            // Default for unknown operator types
++            estimate = 1000.0;
++        }
++
++        // Store and return the estimate
++        cardinalityEstimates.put(op, estimate);
++        return estimate;
++    }
++
++    /**
++     * Estimates the selectivity of a filter predicate
++     *
++     * @param predicate The predicate to estimate
++     * @param statsService The statistics query service to use
++     * @return The estimated selectivity (between 0 and 1)
++     */
++    private double estimateSelectivity(Predicate predicate, StatisticsQueryService statsService) {
++        if (predicate instanceof ComparisonPredicate) {
++            ComparisonPredicate compPred = (ComparisonPredicate) predicate;
++            Object leftOp = compPred.getLeftOperand();
++            Object rightOp = compPred.getRightOperand();
++            String operator = compPred.getOperator();
++
++            if (leftOp instanceof String) {
++                String columnName = (String) leftOp;
++                String tableName = catalog.getTableForColumn(columnName);
++
++                if (tableName != null) {
++                    switch (operator) {
++                        case "=":
++                            return statsService.getEqualitySelectivity(tableName, columnName, rightOp);
++                        case ">":
++                        case ">=":
++                            return statsService.getRangeSelectivity(tableName, columnName, rightOp, null);
++                        case "<":
++                        case "<=":
++                            return statsService.getRangeSelectivity(tableName, columnName, null, rightOp);
++                        case "!=":
++                            return 1.0 - statsService.getEqualitySelectivity(tableName, columnName, rightOp);
++                        default:
++                            return 0.5; // Default for unknown operators
++                    }
++                }
++            }
++        }
++
++        return 0.3; // Default selectivity
++    }
++
++    /**
++     * Estimates the selectivity of a join operation
++     *
++     * @param join The join operator
++     * @param statsService The statistics query service to use
++     * @return The estimated join selectivity
++     */
++    private double estimateJoinSelectivity(JoinOperator join, StatisticsQueryService statsService) {
++        if (join.getPredicate() instanceof EqualityJoinPredicate) {
++            EqualityJoinPredicate joinPred = (EqualityJoinPredicate) join.getPredicate();
++            String leftColumn = joinPred.getLeftColumn();
++            String rightColumn = joinPred.getRightColumn();
++
++            String leftTable = catalog.getTableForColumn(leftColumn);
++            String rightTable = catalog.getTableForColumn(rightColumn);
++
++            if (leftTable != null && rightTable != null) {
++                // Use the inverse of the maximum cardinality as a heuristic
++                TableStatistics leftStats = catalog.getTableStatistics(leftTable);
++                TableStatistics rightStats = catalog.getTableStatistics(rightTable);
++
++                if (leftStats != null && rightStats != null) {
++                    double leftCardinality = leftStats.getColumnStatistics(leftColumn).getCardinality();
++                    double rightCardinality = rightStats.getColumnStatistics(rightColumn).getCardinality();
++                    double maxCardinality = Math.max(leftCardinality, rightCardinality);
++
++                    return 1.0 / maxCardinality;
++                }
++            }
++        }
++
++        return 0.1; // Default join selectivity
++    }
++
++    /**
++     * Reorders joins to optimize the query plan
++     *
++     * @param op The operator to process
++     * @param statsService The statistics query service to use
++     * @param cardinalityEstimates Map with cardinality estimates
++     * @return The optimized operator
++     */
++    private Operator reorderJoins(Operator op, StatisticsQueryService statsService,
++                                  Map<Operator, Double> cardinalityEstimates) {
++        if (op == null) {
++            return null;
++        }
++
++        if (op instanceof JoinOperator) {
++            JoinOperator join = (JoinOperator) op;
++
++            // Recursively optimize subtrees first
++            Operator optimizedLeft = reorderJoins(join.getLeftChild(), statsService, cardinalityEstimates);
++            Operator optimizedRight = reorderJoins(join.getRightChild(), statsService, cardinalityEstimates);
++
++            // Get cardinality estimates for both children
++            double leftEstimate = cardinalityEstimates.getOrDefault(optimizedLeft,
++                    estimateCardinality(optimizedLeft, statsService, cardinalityEstimates));
++            double rightEstimate = cardinalityEstimates.getOrDefault(optimizedRight,
++                    estimateCardinality(optimizedRight, statsService, cardinalityEstimates));
++
++            // Put the smaller cardinality side on the left (for hash join)
++            if (rightEstimate < leftEstimate) {
++                // Swap sides if right side has smaller cardinality
++                // Note: This assumes joins are commutative (e.g., equality joins)
++                if (join.getPredicate() instanceof EqualityJoinPredicate) {
++                    EqualityJoinPredicate predicate = (EqualityJoinPredicate) join.getPredicate();
++                    // Create a new predicate with swapped columns
++                    EqualityJoinPredicate swappedPredicate =
++                            new EqualityJoinPredicate(predicate.getRightColumn(), predicate.getLeftColumn());
++
++                    return new JoinOperator(optimizedRight, optimizedLeft, swappedPredicate);
++                }
++            }
++
++            return new JoinOperator(optimizedLeft, optimizedRight, join.getPredicate());
++
++        } else if (op instanceof FilterOperator) {
++            FilterOperator filter = (FilterOperator) op;
++            Operator optimizedChild = reorderJoins(filter.getChild(), statsService, cardinalityEstimates);
++            return new FilterOperator(optimizedChild, filter.getPredicate());
++        } else if (op instanceof ProjectOperator) {
++            ProjectOperator project = (ProjectOperator) op;
++            Operator optimizedChild = reorderJoins(project.getChild(), statsService, cardinalityEstimates);
++            return new ProjectOperator(optimizedChild, project.getProjectedColumns(), project.isDistinct());
++        } else if (op instanceof SinkOperator) {
++            SinkOperator sink = (SinkOperator) op;
++            Operator optimizedChild = reorderJoins(sink.getChild(), statsService, cardinalityEstimates);
++            return new SinkOperator(optimizedChild, sink.getOutputFile());
++        }
++
++        // ScanOperator or other terminal operators - no modification needed
++        return op;
+     }
+ }
