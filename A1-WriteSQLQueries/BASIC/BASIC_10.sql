@@ -1,0 +1,3 @@
+SELECT DISTINCT hcpcs_cd, short_description FROM hosp.hcpcsevents
+WHERE short_description ILIKE '%Hospital observation%'
+ORDER BY hcpcs_cd, short_description;

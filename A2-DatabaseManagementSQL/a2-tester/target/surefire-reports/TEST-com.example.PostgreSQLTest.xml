@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="com.example.PostgreSQLTest" time="1.627" tests="20" errors="0" skipped="0" failures="0">
+  <properties>
+    <property name="sun.desktop" value="gnome"/>
+    <property name="awt.toolkit" value="sun.awt.X11.XToolkit"/>
+    <property name="file.encoding.pkg" value="sun.io"/>
+    <property name="java.specification.version" value="1.8"/>
+    <property name="sun.cpu.isalist" value=""/>
+    <property name="sun.jnu.encoding" value="UTF-8"/>
+    <property name="java.class.path" value="/home/aniket/IITDelhi/SEM_VI/COL362_ass/A2/a2-tester/target/test-classes:/home/aniket/IITDelhi/SEM_VI/COL362_ass/A2/a2-tester/target/classes:/home/aniket/.m2/repository/org/postgresql/postgresql/42.7.5/postgresql-42.7.5.jar:/home/aniket/.m2/repository/org/checkerframework/checker-qual/3.48.3/checker-qual-3.48.3.jar:/home/aniket/.m2/repository/org/junit/jupiter/junit-jupiter-api/5.9.2/junit-jupiter-api-5.9.2.jar:/home/aniket/.m2/repository/org/opentest4j/opentest4j/1.2.0/opentest4j-1.2.0.jar:/home/aniket/.m2/repository/org/junit/platform/junit-platform-commons/1.9.2/junit-platform-commons-1.9.2.jar:/home/aniket/.m2/repository/org/apiguardian/apiguardian-api/1.1.2/apiguardian-api-1.1.2.jar:/home/aniket/.m2/repository/org/junit/jupiter/junit-jupiter-engine/5.9.2/junit-jupiter-engine-5.9.2.jar:/home/aniket/.m2/repository/org/junit/platform/junit-platform-engine/1.9.2/junit-platform-engine-1.9.2.jar:/home/aniket/.m2/repository/org/testcontainers/postgresql/1.19.3/postgresql-1.19.3.jar:/home/aniket/.m2/repository/org/testcontainers/jdbc/1.19.3/jdbc-1.19.3.jar:/home/aniket/.m2/repository/org/testcontainers/database-commons/1.19.3/database-commons-1.19.3.jar:/home/aniket/.m2/repository/org/testcontainers/testcontainers/1.19.3/testcontainers-1.19.3.jar:/home/aniket/.m2/repository/junit/junit/4.13.2/junit-4.13.2.jar:/home/aniket/.m2/repository/org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3.jar:/home/aniket/.m2/repository/org/apache/commons/commons-compress/1.24.0/commons-compress-1.24.0.jar:/home/aniket/.m2/repository/org/rnorth/duct-tape/duct-tape/1.0.8/duct-tape-1.0.8.jar:/home/aniket/.m2/repository/org/jetbrains/annotations/17.0.0/annotations-17.0.0.jar:/home/aniket/.m2/repository/com/github/docker-java/docker-java-api/3.3.4/docker-java-api-3.3.4.jar:/home/aniket/.m2/repository/com/fasterxml/jackson/core/jackson-annotations/2.10.3/jackson-annotations-2.10.3.jar:/home/aniket/.m2/repository/com/github/docker-java/docker-java-transport-zerodep/3.3.4/docker-java-transport-zerodep-3.3.4.jar:/home/aniket/.m2/repository/com/github/docker-java/docker-java-transport/3.3.4/docker-java-transport-3.3.4.jar:/home/aniket/.m2/repository/net/java/dev/jna/jna/5.13.0/jna-5.13.0.jar:/home/aniket/.m2/repository/org/slf4j/slf4j-api/1.7.36/slf4j-api-1.7.36.jar:/home/aniket/.m2/repository/ch/qos/logback/logback-classic/1.2.11/logback-classic-1.2.11.jar:/home/aniket/.m2/repository/ch/qos/logback/logback-core/1.2.11/logback-core-1.2.11.jar:"/>
+    <property name="java.vm.vendor" value="Private Build"/>
+    <property name="sun.arch.data.model" value="64"/>
+    <property name="java.vendor.url" value="http://java.oracle.com/"/>
+    <property name="user.timezone" value="Asia/Kolkata"/>
+    <property name="java.vm.specification.version" value="1.8"/>
+    <property name="os.name" value="Linux"/>
+    <property name="user.country" value="US"/>
+    <property name="sun.java.launcher" value="SUN_STANDARD"/>
+    <property name="sun.boot.library.path" value="/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64"/>
+    <property name="sun.java.command" value="/home/aniket/IITDelhi/SEM_VI/COL362_ass/A2/a2-tester/target/surefire/surefirebooter-20250219023335561_3.jar /home/aniket/IITDelhi/SEM_VI/COL362_ass/A2/a2-tester/target/surefire 2025-02-19T02-33-35_096-jvmRun1 surefire-20250219023335561_1tmp surefire_0-20250219023335561_2tmp"/>
+    <property name="surefire.test.class.path" value="/home/aniket/IITDelhi/SEM_VI/COL362_ass/A2/a2-tester/target/test-classes:/home/aniket/IITDelhi/SEM_VI/COL362_ass/A2/a2-tester/target/classes:/home/aniket/.m2/repository/org/postgresql/postgresql/42.7.5/postgresql-42.7.5.jar:/home/aniket/.m2/repository/org/checkerframework/checker-qual/3.48.3/checker-qual-3.48.3.jar:/home/aniket/.m2/repository/org/junit/jupiter/junit-jupiter-api/5.9.2/junit-jupiter-api-5.9.2.jar:/home/aniket/.m2/repository/org/opentest4j/opentest4j/1.2.0/opentest4j-1.2.0.jar:/home/aniket/.m2/repository/org/junit/platform/junit-platform-commons/1.9.2/junit-platform-commons-1.9.2.jar:/home/aniket/.m2/repository/org/apiguardian/apiguardian-api/1.1.2/apiguardian-api-1.1.2.jar:/home/aniket/.m2/repository/org/junit/jupiter/junit-jupiter-engine/5.9.2/junit-jupiter-engine-5.9.2.jar:/home/aniket/.m2/repository/org/junit/platform/junit-platform-engine/1.9.2/junit-platform-engine-1.9.2.jar:/home/aniket/.m2/repository/org/testcontainers/postgresql/1.19.3/postgresql-1.19.3.jar:/home/aniket/.m2/repository/org/testcontainers/jdbc/1.19.3/jdbc-1.19.3.jar:/home/aniket/.m2/repository/org/testcontainers/database-commons/1.19.3/database-commons-1.19.3.jar:/home/aniket/.m2/repository/org/testcontainers/testcontainers/1.19.3/testcontainers-1.19.3.jar:/home/aniket/.m2/repository/junit/junit/4.13.2/junit-4.13.2.jar:/home/aniket/.m2/repository/org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3.jar:/home/aniket/.m2/repository/org/apache/commons/commons-compress/1.24.0/commons-compress-1.24.0.jar:/home/aniket/.m2/repository/org/rnorth/duct-tape/duct-tape/1.0.8/duct-tape-1.0.8.jar:/home/aniket/.m2/repository/org/jetbrains/annotations/17.0.0/annotations-17.0.0.jar:/home/aniket/.m2/repository/com/github/docker-java/docker-java-api/3.3.4/docker-java-api-3.3.4.jar:/home/aniket/.m2/repository/com/fasterxml/jackson/core/jackson-annotations/2.10.3/jackson-annotations-2.10.3.jar:/home/aniket/.m2/repository/com/github/docker-java/docker-java-transport-zerodep/3.3.4/docker-java-transport-zerodep-3.3.4.jar:/home/aniket/.m2/repository/com/github/docker-java/docker-java-transport/3.3.4/docker-java-transport-3.3.4.jar:/home/aniket/.m2/repository/net/java/dev/jna/jna/5.13.0/jna-5.13.0.jar:/home/aniket/.m2/repository/org/slf4j/slf4j-api/1.7.36/slf4j-api-1.7.36.jar:/home/aniket/.m2/repository/ch/qos/logback/logback-classic/1.2.11/logback-classic-1.2.11.jar:/home/aniket/.m2/repository/ch/qos/logback/logback-core/1.2.11/logback-core-1.2.11.jar:"/>
+    <property name="sun.cpu.endian" value="little"/>
+    <property name="user.home" value="/home/aniket"/>
+    <property name="user.language" value="en"/>
+    <property name="java.specification.vendor" value="Oracle Corporation"/>
+    <property name="java.home" value="/usr/lib/jvm/java-8-openjdk-amd64/jre"/>
+    <property name="basedir" value="/home/aniket/IITDelhi/SEM_VI/COL362_ass/A2/a2-tester"/>
+    <property name="file.separator" value="/"/>
+    <property name="line.separator" value="&#10;"/>
+    <property name="java.vm.specification.vendor" value="Oracle Corporation"/>
+    <property name="java.specification.name" value="Java Platform API Specification"/>
+    <property name="java.awt.graphicsenv" value="sun.awt.X11GraphicsEnvironment"/>
+    <property name="surefire.real.class.path" value="/home/aniket/IITDelhi/SEM_VI/COL362_ass/A2/a2-tester/target/surefire/surefirebooter-20250219023335561_3.jar"/>
+    <property name="sun.boot.class.path" value="/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/resources.jar:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/rt.jar:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/sunrsasign.jar:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/jsse.jar:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/jce.jar:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/charsets.jar:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/jfr.jar:/usr/lib/jvm/java-8-openjdk-amd64/jre/classes"/>
+    <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
+    <property name="java.runtime.version" value="1.8.0_442-8u442-b06~us1-0ubuntu1~24.04-b06"/>
+    <property name="user.name" value="aniket"/>
+    <property name="path.separator" value=":"/>
+    <property name="os.version" value="6.8.0-52-generic"/>
+    <property name="java.endorsed.dirs" value="/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/endorsed"/>
+    <property name="java.runtime.name" value="OpenJDK Runtime Environment"/>
+    <property name="file.encoding" value="UTF-8"/>
+    <property name="java.vm.name" value="OpenJDK 64-Bit Server VM"/>
+    <property name="localRepository" value="/home/aniket/.m2/repository"/>
+    <property name="java.vendor.url.bug" value="http://bugreport.sun.com/bugreport/"/>
+    <property name="java.io.tmpdir" value="/tmp"/>
+    <property name="java.version" value="1.8.0_442"/>
+    <property name="user.dir" value="/home/aniket/IITDelhi/SEM_VI/COL362_ass/A2/a2-tester"/>
+    <property name="os.arch" value="amd64"/>
+    <property name="java.vm.specification.name" value="Java Virtual Machine Specification"/>
+    <property name="java.awt.printerjob" value="sun.print.PSPrinterJob"/>
+    <property name="sun.os.patch.level" value="unknown"/>
+    <property name="trimStackTrace" value="true"/>
+    <property name="java.library.path" value="/usr/java/packages/lib/amd64:/usr/lib/x86_64-linux-gnu/jni:/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu:/usr/lib/jni:/lib:/usr/lib"/>
+    <property name="java.vm.info" value="mixed mode"/>
+    <property name="java.vendor" value="Private Build"/>
+    <property name="java.vm.version" value="25.442-b06"/>
+    <property name="java.specification.maintenance.version" value="6"/>
+    <property name="java.ext.dirs" value="/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/ext:/usr/java/packages/lib/ext"/>
+    <property name="sun.io.unicode.encoding" value="UnicodeLittle"/>
+    <property name="java.class.version" value="52.0"/>
+  </properties>
+  <testcase name="testExtras_ExtraRunsNull" classname="com.example.PostgreSQLTest" time="0.082">
+    <system-out><![CDATA[Database created successfully!
+]]></system-out>
+  </testcase>
+  <testcase name="testTeam_RegionNull" classname="com.example.PostgreSQLTest" time="0.005"/>
+  <testcase name="testBatterScore_RunScoredNull" classname="com.example.PostgreSQLTest" time="0.015"/>
+  <testcase name="testTeam_TeamIdNull" classname="com.example.PostgreSQLTest" time="0.005"/>
+  <testcase name="testMatch_MatchIdNull" classname="com.example.PostgreSQLTest" time="0.014"/>
+  <testcase name="testAwards_AwardTypeNull" classname="com.example.PostgreSQLTest" time="0.01"/>
+  <testcase name="testPlayerMatch_RoleNull" classname="com.example.PostgreSQLTest" time="0.014"/>
+  <testcase name="testMatch_MatchDateNull" classname="com.example.PostgreSQLTest" time="0.014"/>
+  <testcase name="testAuction_AuctionIdNull" classname="com.example.PostgreSQLTest" time="0.011"/>
+  <testcase name="testAuction_IsSoldNull" classname="com.example.PostgreSQLTest" time="0.008"/>
+  <testcase name="testPlayer_PlayerIdNull" classname="com.example.PostgreSQLTest" time="0.004"/>
+  <testcase name="testBalls_BallNumNull" classname="com.example.PostgreSQLTest" time="0.014"/>
+  <testcase name="testExtras_ExtraTypeNull" classname="com.example.PostgreSQLTest" time="0.015"/>
+  <testcase name="testSeason_EndDateNull" classname="com.example.PostgreSQLTest" time="0.003"/>
+  <testcase name="testPlayerMatch_IsExtraNull" classname="com.example.PostgreSQLTest" time="0.014"/>
+  <testcase name="testWickets_KindOutNull" classname="com.example.PostgreSQLTest" time="0.017"/>
+  <testcase name="testPlayer_BattingHandNull" classname="com.example.PostgreSQLTest" time="0.003"/>
+  <testcase name="testBalls_InningsNumNull" classname="com.example.PostgreSQLTest" time="0.011"/>
+  <testcase name="testMatch_MatchTypeNull" classname="com.example.PostgreSQLTest" time="0.012"/>
+  <testcase name="testSeason_YearNull" classname="com.example.PostgreSQLTest" time="0.003"/>
+</testsuite>
